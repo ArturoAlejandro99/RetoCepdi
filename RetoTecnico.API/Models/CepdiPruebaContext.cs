@@ -84,7 +84,7 @@ public partial class CepdiPruebaContext : DbContext
             entity.Property(e => e.Password)
                 .HasMaxLength(100)
                 .HasColumnName("password");
-            entity.Property(e => e.Usuario1)
+            entity.Property(e => e.NombreUsuario)
                 .HasMaxLength(100)
                 .HasColumnName("usuario");
         });
