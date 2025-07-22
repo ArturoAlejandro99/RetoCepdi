@@ -1,0 +1,57 @@
+## .NET Core
+bin/
+obj/
+out/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Entity Framework
+*.dbmdl
+*.bak
+*.mdf
+*.ldf
+Migrations/
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio Code
+.vscode/
+
+## Build results
+*.dll
+*.exe
+*.app
+*.log
+
+## NuGet
+*.nupkg
+packages/
+.nuget/
+
+## Secrets / Config
+secrets.json
+*.pfx
+*.key
+
+## OS generated files
+.DS_Store
+Thumbs.db
+
+## Others
+*.vspscc
+*.vssscc
+_ReSharper*/
+*.resharper
+*.sln.iml
+.idea/
+*.iml
+
+## Logs
+*.log
+
+## Auto-generated file
