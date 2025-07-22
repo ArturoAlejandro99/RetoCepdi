@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RetoTecnico.API.Models;
 
@@ -12,7 +11,7 @@ public partial class Usuario
 
     public DateTime? Fechacreacion { get; set; }
 
-    public string? NombreUsuario { get; set; }
+    public string? Usuario1 { get; set; }
 
     public string? Password { get; set; }
 

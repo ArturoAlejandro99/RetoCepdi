@@ -63,8 +63,7 @@ public partial class CepdiPruebaContext : DbContext
                 .HasColumnName("presentacion");
             entity.Property(e => e.Stock).HasColumnName("stock");
 
-            entity.HasOne(d => d.FormaFarmaceutica)
-                .WithMany(p => p.Medicamentos)
+            entity.HasOne(d => d.IdformafarmaceuticaNavigation).WithMany(p => p.Medicamentos)
                 .HasForeignKey(d => d.Idformafarmaceutica)
                 .HasConstraintName("FK__medicamen__idfor__3D5E1FD2");
         });
@@ -85,7 +84,7 @@ public partial class CepdiPruebaContext : DbContext
             entity.Property(e => e.Password)
                 .HasMaxLength(100)
                 .HasColumnName("password");
-             entity.Property(e => e.NombreUsuario)
+            entity.Property(e => e.Usuario1)
                 .HasMaxLength(100)
                 .HasColumnName("usuario");
         });

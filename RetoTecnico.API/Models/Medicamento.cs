@@ -1,5 +1,5 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic;
 
 namespace RetoTecnico.API.Models;
 
@@ -21,5 +21,5 @@ public partial class Medicamento
 
     public int? Bhabilitado { get; set; }
 
-    public virtual Formasfarmaceutica? FormaFarmaceutica { get; set; }
+    public virtual Formasfarmaceutica? IdformafarmaceuticaNavigation { get; set; }
 }
