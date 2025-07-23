@@ -1,57 +1,115 @@
-## .NET Core
-bin/
-obj/
-out/
-project.lock.json
-project.fragment.lock.json
-artifacts/
-
-## Entity Framework
-*.dbmdl
-*.bak
-*.mdf
-*.ldf
-Migrations/
-
-## User-specific files
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-
-## Visual Studio Code
-.vscode/
-
-## Build results
+# Build results
+[Dd]ebug/
+[Rr]elease/
 *.dll
+*.pdb
 *.exe
-*.app
+*.exp
+*.lib
+*.obj
+*.o
+*.lo
+*.rej
+*.bak
+*.gz
+*.zip
+*.tar
+*.tmp
 *.log
-
-## NuGet
-*.nupkg
-packages/
-.nuget/
-
-## Secrets / Config
-secrets.json
-*.pfx
-*.key
-
-## OS generated files
-.DS_Store
-Thumbs.db
-
-## Others
+*.cache
+*.apk
+*.ap_
+*.dex
+*.class
+*.jar
+*.lock.json
 *.vspscc
 *.vssscc
-_ReSharper*/
-*.resharper
-*.sln.iml
+*.vsproj
+*.user
+*.suo
+*.nxproj
+*.xcframework
+*.xcodeproj
+*.xcworkspace
+*.playground
+*.ipa
+*.xcdatamodels
+*.xcuserstate
+*.xcscheme
+
+# VS Code related files
+.vscode/
+
+# Visual Studio files
+.vs/
+*.sln.docstates
+*.user
+*.vssscc
+*.vspscc
+*.suo
+*.bak
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.sync
+*_UpgradeReport.htm
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# NuGet packages
+packages/
+*.nupkg
+.nuget/nuget.exe
+.nuget/*.txt
+.nuget/*.xml
+
+# Rider
 .idea/
 *.iml
 
-## Logs
-*.log
+# Mac
+.DS_Store
 
-## Auto-generated file
+# Project specific files
+*.csproj.user
+*.vbproj.user
+*.fsproj.user
+*.sqlproj.user
+*.ccproj.user
+
+# Ignore xunit test runner XML report files
+*.trx
+
+# MSBuild output files
+*.log
+*.wrn
+*.err
+
+# Azure functions
+local.settings.json
+
+# Key files
+*.pfx
+*.snk
+
+# Certificate files
+*.cer
+*.crt
+*.der
+*.pem
+
+# Other temp files
+*~
+*#
+\#*
+.#*
+*.swo
+*.swp
+*.bak
+*.org
+*.DS_Store
+Thumbs.db
