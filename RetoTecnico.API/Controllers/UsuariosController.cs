@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using Microsoft.AspNetCore.Authorization;
 
 namespace RetoTecnico.API.Controllers
 {
@@ -20,6 +21,7 @@ namespace RetoTecnico.API.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<UsuarioResponseDto>>> GetUsuarios([FromQuery] UsuarioQueryParamsDTO queryParams)
         {
             var usuariosDto = await _usuarioService.GetAllUsuariosAsync(queryParams);
