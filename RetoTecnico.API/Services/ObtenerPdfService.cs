@@ -38,12 +38,9 @@ public class ObtenerPdfService : IObtenerPdfService
                 <soapenv:Header/>
                 <soapenv:Body>
                     <web:ObtenerPDF>
-                        <!--Optional:-->
-                        <Usuario>demo1@mail.com</Usuario>
-                        <!--Optional:-->
-                        <Password>Demo123#</Password>
-                        <!--Optional:-->
-                        <uuid>ca7ae63b-32aa-40b9-8bb9-7c500a087ab5</uuid>
+                        <Usuario>{usuario}</Usuario>
+                        <Password>{password}</Password>
+                        <uuid>{uuid}</uuid>
                     </web:ObtenerPDF>
                 </soapenv:Body>
                 </soapenv:Envelope>";
