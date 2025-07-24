@@ -1,0 +1,239 @@
+@page
+@model RetoTecnico.Web.Pages.Facturas.IndexModel
+@{
+    ViewData["Title"] = "Obtener Factura PDF";
+    Layout = "_Layout";
+}
+
+<div class="text-center">
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card p-4 shadow-sm">
+                    <h5 class="card-title">Cargar Factura XML</h5>
+
+                    <div id="dropArea" class="border border-secondary border-dashed rounded p-5 mb-3 text-center">
+                        <p class="mb-0">Arrastra y suelta tu archivo XML aquí.</p>
+                        <input type="file" id="xmlFileInput" accept=".xml" hidden>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="uuidInput" class="form-label">UUID:</label>
+                        <input type="text" class="form-control" id="uuidInput">
+                    </div>
+
+                    <button id="getPdfButton" class="btn btn-primary mt-3">Obtener PDF</button>
+
+                    <div id="resultMessage" class="alert mt-3" role="alert" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const dropArea = $('#dropArea');
+        const xmlFileInput = $('#xmlFileInput');
+        const uuidInput = $('#uuidInput');
+        const getPdfButton = $('#getPdfButton');
+        const resultMessage = $('#resultMessage');
+
+        function showMessage(message, type) {
+            resultMessage.text(message).removeClass('alert-success alert-danger alert-info').hide();
+            if (type === 'success') {
+                resultMessage.addClass('alert-success');
+            } else if (type === 'error') {
+                resultMessage.addClass('alert-danger');
+            } else {
+                resultMessage.addClass('alert-info');
+            }
+            resultMessage.fadeIn();
+        }
+
+        function extractUuidFromXml(xmlString) {
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+                const timbreFiscalDigital = xmlDoc.querySelector('TimbreFiscalDigital');
+                if (timbreFiscalDigital && timbreFiscalDigital.hasAttribute('UUID')) {
+                    return timbreFiscalDigital.getAttribute('UUID');
+                }
+                
+                const tfdNamespace = 'http://www.sat.gob.mx/TimbreFiscalDigital';
+                const timbreElement = xmlDoc.querySelector(`[UUID][xsi\\:schemaLocation*="${tfdNamespace}"]`);
+                if (timbreElement && timbreElement.hasAttribute('UUID')) {
+                     return timbreElement.getAttribute('UUID');
+                }
+
+                const allElements = xmlDoc.getElementsByTagName('*');
+                for (let i = 0; i < allElements.length; i++) {
+                    if (allElements[i].localName === 'TimbreFiscalDigital' && allElements[i].hasAttribute('UUID')) {
+                        return allElements[i].getAttribute('UUID');
+                    }
+                }
+
+                return null;
+            } catch (e) {
+                console.error("Error al parsear el XML o extraer UUID:", e);
+                return null;
+            }
+        }
+
+        dropArea.on('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).addClass('bg-light');
+        });
+
+        dropArea.on('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('bg-light');
+        });
+
+        dropArea.on('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('bg-light');
+
+            const files = e.originalEvent.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === "text/xml" || file.name.toLowerCase().endsWith('.xml')) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const xmlContent = event.target.result;
+                        const uuid = extractUuidFromXml(xmlContent);
+                        if (uuid) {
+                            uuidInput.val(uuid);
+                            showMessage('UUID extraído del XML: ' + uuid, 'success');
+                        } else {
+                            showMessage('No se pudo extraer el UUID del archivo XML. Asegúrate de que sea un CFDI válido.', 'error');
+                            uuidInput.val('');
+                        }
+                    };
+                    reader.onerror = function() {
+                        showMessage('Error al leer el archivo.', 'error');
+                        uuidInput.val('');
+                    };
+                    reader.readAsText(file);
+                } else {
+                    showMessage('Por favor, arrastra un archivo XML válido.', 'error');
+                    uuidInput.val('');
+                }
+            }
+        });
+
+        dropArea.on('click', function() {
+            xmlFileInput.click();
+        });
+
+        xmlFileInput.on('change', function() {
+            const file = this.files[0];
+            if (file) {
+                if (file.type === "text/xml" || file.name.toLowerCase().endsWith('.xml')) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const xmlContent = event.target.result;
+                        const uuid = extractUuidFromXml(xmlContent);
+                        if (uuid) {
+                            uuidInput.val(uuid);
+                            showMessage('UUID extraído del XML: ' + uuid, 'success');
+                        } else {
+                            showMessage('No se pudo extraer el UUID del archivo XML. Asegúrate de que sea un CFDI válido.', 'error');
+                            uuidInput.val('');
+                        }
+                    };
+                    reader.onerror = function() {
+                        showMessage('Error al leer el archivo.', 'error');
+                        uuidInput.val('');
+                    };
+                    reader.readAsText(file);
+                } else {
+                    showMessage('Por favor, selecciona un archivo XML válido.', 'error');
+                    uuidInput.val('');
+                }
+            }
+        });
+
+        getPdfButton.on('click', async function() {
+            const uuid = uuidInput.val().trim();
+
+            if (!uuid) {
+                showMessage('Por favor, ingresa un UUID o arrastra un archivo XML.', 'error');
+                return;
+            }
+
+            showMessage('Obteniendo PDF...', 'info');
+
+            callBackendObtenerPDF(uuid);
+        });
+        var apiBaseUrl = "@Model.ApiBaseUrl";
+
+        function callBackendObtenerPDF(uuid) { 
+            const backendApiUrl =  apiBaseUrl + `/api/Facturas/obtenerpdf/${uuid}`; 
+
+            $.ajax({
+                url: backendApiUrl,
+                type: 'POST', 
+                dataType: 'json', 
+                contentType: 'application/json', 
+                success: function(responseData) {
+                    if (responseData.exitoso) {
+                        showMessage('PDF obtenido exitosamente.', 'success');
+                        displayPdf(responseData.pdfBase64); 
+                    } else {
+                        showMessage('Error al obtener el PDF: ' + (responseData.mensajeError || 'Error desconocido del servicio.'), 'error');
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    let errorMessage = 'Error en la comunicación con tu backend: ' + (errorThrown || textStatus);
+                    try {
+                        // Intenta parsear la respuesta de error si es JSON
+                        const errorResponse = JSON.parse(jqXHR.responseText);
+                        if (errorResponse && errorResponse.mensajeError) {
+                            errorMessage = 'Error del servidor: ' + errorResponse.mensajeError;
+                        } else if (errorResponse && errorResponse.errors) { // Ej. errores de validación de ASP.NET Core
+                             errorMessage = 'Error de validación: ' + JSON.stringify(errorResponse.errors);
+                        }
+                    } catch (e) {
+                        // Si no es JSON, usa el mensaje de error HTTP
+                        errorMessage = 'Error inesperado del servidor: ' + jqXHR.responseText;
+                    }
+                    showMessage(errorMessage, 'error');
+                    console.error('Error calling backend API (jQuery AJAX):', textStatus, errorThrown, jqXHR.responseText);
+                }
+            });
+        }
+
+        function displayPdf(base64Pdf) {
+            const pdfData = `data:application/pdf;base64,${base64Pdf}`;
+            
+            
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>PDF de Factura</title>
+                        <style>
+                            html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+                            iframe { width: 100%; height: 100%; border: none; }
+                        </style>
+                    </head>
+                    <body>
+                        <iframe src="${pdfData}"></iframe>
+                    </body>
+                    </html>
+                `);
+                newWindow.document.close(); 
+                
+            } else {
+                showMessage('El navegador bloqueó la apertura de la nueva ventana para el PDF. Por favor, permite pop-ups para este sitio.', 'error');
+            }
+        }
+    </script>
+}

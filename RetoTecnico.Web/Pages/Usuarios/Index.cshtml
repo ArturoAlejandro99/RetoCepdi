@@ -1,0 +1,419 @@
+@page
+@model RetoTecnico.Web.Pages.Usuarios.IndexModel
+@{
+    ViewData["Title"] = "Listado de Usuarios";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <h1>Listado de Usuarios</h1>
+
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+            <input type="text" id="filterName" class="form-control" placeholder="Filtrar por Nombre">
+            <button id="applyFilterBtn" class="btn btn-sm btn-primary mt-2">Aplicar Filtro</button>
+        </div>
+        <button id="createUsuarioBtn" class="btn btn-success">Crear Nuevo Usuario</button>
+    </div>
+
+    <div id="usersTableContainer" class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>ID Usuario</th>
+                    <th>Nombre</th>
+                    <th>Fecha Creación</th>
+                    <th>Usuario</th>
+                    <th>Estatus</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center" id="pagination">
+            </ul>
+        </nav>
+    </div>
+
+    <div id="loadingMessage" class="alert alert-info" role="alert" style="display:none;">
+        Cargando usuarios...
+    </div>
+    <div id="errorMessage" class="alert alert-danger" role="alert" style="display:none;">
+        Error al cargar usuarios.
+    </div>
+</div>
+
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <input type="hidden" id="userId" name="Idusuario">
+                    <div class="mb-3">
+                        <label for="userName" class="form-label">Nombre:</label>
+                        <input type="text" class="form-control" id="userName" name="Nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userUsername" class="form-label">Usuario:</label>
+                        <input type="text" class="form-control" id="userUsername" name="NombreUsuario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userPassword" class="form-label">Contraseña:</label>
+                        <input type="password" class="form-control" id="userPassword" name="Contrasena">
+                        <small class="form-text text-muted" id="passwordHint"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userStatus" class="form-label">Estatus:</label>
+                        <select class="form-select" id="userStatus" name="Estatus">
+                            <option value="1">Activo</option>
+                            <option value="0">Inactivo</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" id="saveUserBtn">Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var apiBaseUrl = "@Model.ApiBaseUrl";
+            var currentPage = 1;
+            var pageSize = 10;
+            var currentFilter = "";
+            var isEditMode = false;
+
+
+            function getJwtToken() {
+                var jwtToken = localStorage.getItem('jwtToken');
+                if (!jwtToken) {
+                    window.location.href = '/Login';
+                }
+                return jwtToken;
+            }
+
+            function showAlert(message, type = 'success') {
+                var alertHtml = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                                    ${message}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>`;
+                $('.container.mt-5').prepend(alertHtml);
+                setTimeout(function() {
+                    $('.alert').alert('close');
+                }, 5000);
+            }
+
+            function loadUsers(page, filter) {
+                $('#loadingMessage').show();
+                $('#errorMessage').hide();
+                $('#usersTableBody').empty();
+
+                var jwtToken = getJwtToken();
+                if (!jwtToken) return;
+
+                $.ajax({
+                    url: apiBaseUrl + '/api/Usuarios',
+                    type: 'GET',
+                    data: {
+                        pageNumber: page,
+                        pageSize: pageSize,
+                        searchTerm: filter
+                    },
+                    headers: {
+                        'Authorization': 'Bearer ' + jwtToken
+                    },
+                    success: function (response) {
+                        $('#loadingMessage').hide();
+                        if (response && response.data) {
+                            renderUsersTable(response.data);
+                            renderPagination(response.totalRecords, page);
+                        } else {
+                            $('#errorMessage').text('La respuesta de la API no tiene el formato esperado.').show();
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        $('#loadingMessage').hide();
+                        let msg = 'Error desconocido al cargar usuarios.';
+                        if (xhr.status === 401 || xhr.status === 403) {
+                            msg = 'Sesión expirada o no autorizada. Por favor, inicia sesión de nuevo.';
+                            localStorage.removeItem('jwtToken');
+                            window.location.href = '/Login';
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        } else {
+                            msg = 'Error al conectar con la API: ' + error + ' (Estado: ' + xhr.status + ')';
+                        }
+                        $('#errorMessage').text(msg).show();
+                    }
+                });
+            }
+
+            function renderUsersTable(users) {
+                var tableBody = $('#usersTableBody');
+                tableBody.empty();
+
+                if (users.length === 0) {
+                    tableBody.append('<tr><td colspan="6" class="text-center">No hay usuarios para mostrar.</td></tr>');
+                    return;
+                }
+
+                users.forEach(function (user) {
+                    var statusText = user.estatus === 1 ? 'Activo' : 'Inactivo';
+                    var row = `
+                        <tr>
+                            <td>${user.idusuario}</td>
+                            <td>${user.nombre}</td>
+                            <td>${new Date(user.fechacreacion).toLocaleDateString()}</td>
+                            <td>${user.nombreUsuario}</td>
+                            <td>${statusText}</td>
+                            <td>
+                                <button class="btn btn-info btn-sm view-btn" data-id="${user.idusuario}">Ver</button>
+                                <button class="btn btn-warning btn-sm edit-btn" data-id="${user.idusuario}">Editar</button>
+                                <button class="btn btn-danger btn-sm delete-btn" data-id="${user.idusuario}">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.append(row);
+                });
+
+                $('.view-btn').on('click', function() {
+                    var id = $(this).data('id');
+                    openUserModal(id, 'view');
+                });
+                $('.edit-btn').on('click', function() {
+                    var id = $(this).data('id');
+                    openUserModal(id, 'edit');
+                });
+                $('.delete-btn').on('click', function() {
+                    var id = $(this).data('id');
+                    deleteUser(id);
+                });
+            }
+
+            function renderPagination(totalRecords, currentPage) {
+                var totalPages = Math.ceil(totalRecords / pageSize);
+                var paginationHtml = '';
+                var maxPagesToShow = 5;
+
+                paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                    <a class="page-link" href="#" data-page="${currentPage - 1}">Anterior</a>
+                                </li>`;
+
+                let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+                if (endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                                    </li>`;
+                }
+
+                paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                    <a class="page-link" href="#" data-page="${currentPage + 1}">Siguiente</a>
+                                </li>`;
+
+                $('#pagination').html(paginationHtml);
+
+                $('.page-link').on('click', function (e) {
+                    e.preventDefault();
+                    var newPage = parseInt($(this).data('page'));
+                    if (newPage > 0 && newPage <= totalPages && newPage !== currentPage) {
+                        currentPage = newPage;
+                        loadUsers(currentPage, currentFilter);
+                    }
+                });
+            }
+
+            function openUserModal(id = null, mode = 'create') {
+                var modal = new bootstrap.Modal(document.getElementById('userModal'));
+                var modalTitle = $('#userModalLabel');
+                var saveUserBtn = $('#saveUserBtn');
+                var userForm = $('#userForm')[0];
+                var passwordField = $('#userPassword');
+                var passwordHint = $('#passwordHint');
+
+                userForm.reset();
+                $('#userId').val('');
+                passwordField.attr('required', false);
+                passwordHint.text('');
+                isEditMode = false;
+
+                $('#userForm input, #userForm select').prop('disabled', false);
+                saveUserBtn.show();
+
+                if (mode === 'create') {
+                    modalTitle.text('Crear Nuevo Usuario');
+                    passwordField.attr('required', true);
+                    passwordHint.text('Requerido para nuevos usuarios.');
+                    saveUserBtn.text('Crear Usuario');
+                } else {
+                    isEditMode = true;
+                    passwordHint.text('Deja vacío para no cambiar la contraseña.');
+                    saveUserBtn.text('Guardar Cambios');
+                    fetchUser(id, function(user) {
+                        $('#userId').val(user.idusuario);
+                        $('#userName').val(user.nombre);
+                        $('#userUsername').val(user.nombreUsuario);
+                        $('#userStatus').val(user.estatus);
+                        // No hay campo de perfil en el formulario
+                        // $('#userProfile').val(user.idperfil);
+
+                        if (mode === 'view') {
+                            modalTitle.text('Ver Usuario');
+                            $('#userForm input, #userForm select').prop('disabled', true);
+                            saveUserBtn.hide();
+                        } else if (mode === 'edit') {
+                            modalTitle.text('Editar Usuario');
+                        }
+                    });
+                }
+                modal.show();
+            }
+
+            function fetchUser(id, callback) {
+                var jwtToken = getJwtToken();
+                if (!jwtToken) return;
+
+                $.ajax({
+                    url: apiBaseUrl + '/api/Usuarios/' + id,
+                    type: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + jwtToken
+                    },
+                    success: function (user) {
+                        callback(user);
+                    },
+                    error: function (xhr, status, error) {
+                        showAlert('Error al cargar datos del usuario: ' + (xhr.responseJSON ? xhr.responseJSON.message : error), 'danger');
+                        if (xhr.status === 401 || xhr.status === 403) {
+                            localStorage.removeItem('jwtToken');
+                            window.location.href = '/Login';
+                        }
+                    }
+                });
+            }
+
+            function saveUser() {
+                var userData = {
+                    idusuario: $('#userId').val() ? parseInt($('#userId').val()) : 0,
+                    nombre: $('#userName').val(),
+                    nombreUsuario: $('#userUsername').val(),
+                    password: $('#userPassword').val(),
+                    estatus: parseInt($('#userStatus').val())
+                    // No se envía Idperfil ya que no está en el formulario
+                    // Idperfil: parseInt($('#userProfile').val())
+                };
+
+                var jwtToken = getJwtToken();
+                if (!jwtToken) return;
+
+                var type = 'POST';
+                var url = apiBaseUrl + '/api/Usuarios';
+                var successMsg = 'Usuario creado exitosamente.';
+
+                if (isEditMode) {
+                    type = 'PUT';
+                    url += '/' + userData.idusuario;
+                    successMsg = 'Usuario actualizado exitosamente.';
+                }
+
+                if (isEditMode && userData.password === "") {
+                    delete userData.password;
+                } else if (!isEditMode && userData.password === "") {
+                    showAlert('La contraseña es requerida para nuevos usuarios.', 'danger');
+                    return;
+                }
+
+                $.ajax({
+                    url: url,
+                    type: type,
+                    contentType: 'application/json',
+                    data: JSON.stringify(userData),
+                    headers: {
+                        'Authorization': 'Bearer ' + jwtToken
+                    },
+                    success: function (response) {
+                        var modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                        modal.hide();
+                        showAlert(successMsg);
+                        loadUsers(currentPage, currentFilter);
+                    },
+                    error: function (xhr, status, error) {
+                        let msg = 'Error al guardar usuario: ' + (xhr.responseJSON ? xhr.responseJSON.message : error);
+                        showAlert(msg, 'danger');
+                        if (xhr.status === 401 || xhr.status === 403) {
+                            localStorage.removeItem('jwtToken');
+                            window.location.href = '/Login';
+                        }
+                    }
+                });
+            }
+
+            function deleteUser(id) {
+                if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
+                    return;
+                }
+
+                var jwtToken = getJwtToken();
+                if (!jwtToken) return;
+
+                $.ajax({
+                    url: apiBaseUrl + '/api/Usuarios/' + id,
+                    type: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + jwtToken
+                    },
+                    success: function (response) {
+                        showAlert('Usuario eliminado exitosamente.');
+                        loadUsers(currentPage, currentFilter);
+                    },
+                    error: function (xhr, status, error) {
+                        let msg = 'Error al eliminar usuario: ' + (xhr.responseJSON ? xhr.responseJSON.message : error);
+                        showAlert(msg, 'danger');
+                        if (xhr.status === 401 || xhr.status === 403) {
+                            localStorage.removeItem('jwtToken');
+                            window.location.href = '/Login';
+                        }
+                    }
+                });
+            }
+
+            $('#applyFilterBtn').on('click', function () {
+                currentFilter = $('#filterName').val();
+                currentPage = 1;
+                loadUsers(currentPage, currentFilter);
+            });
+
+            $('#createUsuarioBtn').on('click', function () {
+                openUserModal(null, 'create');
+            });
+
+            $('#saveUserBtn').on('click', function () {
+                var form = $('#userForm')[0];
+                if (form.checkValidity()) {
+                    saveUser();
+                } else {
+                    form.reportValidity();
+                }
+            });
+
+            loadUsers(currentPage, currentFilter);
+        });
+    </script>
+}
