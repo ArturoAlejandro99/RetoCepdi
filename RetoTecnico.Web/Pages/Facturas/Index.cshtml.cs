@@ -1,8 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 
-namespace RetoTecnico.Web.Pages.Usuarios
+namespace RetoTecnico.Web.Pages.Facturas
 {
     public class IndexModel : PageModel
     {

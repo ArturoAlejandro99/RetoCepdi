@@ -1,0 +1,224 @@
+@page
+@model RetoTecnico.Web.Pages.Facturas.IndexModel
+@{
+    ViewData["Title"] = "Obtener Factura PDF";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <h1>Obtener Factura en PDF</h1>
+    <p>Utilice este formulario para obtener el PDF de un CFDI timbrado previamente, usando el UUID.</p>
+
+    <div class="card p-4 shadow-sm">
+        <form id="obtenerPdfForm">
+            <div class="mb-3">
+                <label for="usuario" class="form-label">Usuario:</label>
+                <input type="text" class="form-control" id="usuario" name="Usuario" value="demo1@mail.com" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Contraseña:</label>
+                <input type="password" class="form-control" id="password" name="Password" value="Demo123#" required>
+            </div>
+            <div class="mb-3">
+                <label for="uuid" class="form-label">UUID del CFDI (se llenará automáticamente o puede ingresarlo manualmente):</label>
+                <input type="text" class="form-control" id="uuid" name="UUID">
+                <div class="form-text">El UUID del Comprobante Fiscal Digital por Internet.</div>
+            </div>
+
+            <hr>
+            <p class="text-center">O suba un archivo XML arrastrándolo aquí:</p>
+            <div id="dropArea" class="border border-dashed border-primary p-5 text-center mb-3" style="min-height: 150px; cursor: pointer;">
+                Arrastre y suelte su archivo XML aquí
+                <input type="file" id="xmlFileInput" accept=".xml" style="display: none;">
+            </div>
+            <hr>
+
+            <button type="submit" class="btn btn-primary">Obtener PDF</button>
+        </form>
+    </div>
+
+    <div id="resultContainer" class="mt-4" style="display:none;">
+        <div class="alert alert-info" role="alert" id="resultMessage"></div>
+        <div id="pdfViewer" class="mt-3" style="width: 100%; height: 600px;"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script type="text/javascript">
+        $(document).ready(function () {
+            const dropArea = $('#dropArea');
+            const xmlFileInput = $('#xmlFileInput');
+            const uuidInput = $('#uuid');
+            const resultContainer = $('#resultContainer');
+            const resultMessage = $('#resultMessage');
+            const pdfViewer = $('#pdfViewer');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.on(eventName, preventDefaults);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.on(eventName, () => dropArea.addClass('bg-light'));
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.on(eventName, () => dropArea.removeClass('bg-light'));
+            });
+
+            dropArea.on('drop', handleDrop);
+
+            function handleDrop(e) {
+                const dt = e.originalEvent.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+
+            dropArea.on('click', function() {
+                xmlFileInput.click();
+            });
+
+            xmlFileInput.on('change', function() {
+                handleFiles(this.files);
+            });
+
+            function handleFiles(files) {
+                if (files.length === 0) return;
+
+                const file = files[0];
+                if (file.type !== 'text/xml') {
+                    alert('Por favor, suba un archivo XML válido.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const xmlString = e.target.result;
+                    extractUUIDFromXML(xmlString);
+                };
+                reader.readAsText(file);
+            }
+
+            function extractUUIDFromXML(xmlString) {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+                    const timbreFiscalDigital = xmlDoc.getElementsByTagNameNS('http://www.sat.gob.mx/TimbreFiscalDigital', 'TimbreFiscalDigital')[0];
+                    
+                    if (timbreFiscalDigital) {
+                        const uuid = timbreFiscalDigital.getAttribute('UUID');
+                        if (uuid) {
+                            uuidInput.val(uuid);
+                            resultMessage.text('UUID extraído del XML: ' + uuid).removeClass('alert-danger').addClass('alert-success').show();
+                        } else {
+                            resultMessage.text('No se encontró el atributo UUID en el nodo TimbreFiscalDigital.').removeClass('alert-success').addClass('alert-danger').show();
+                        }
+                    } else {
+                        resultMessage.text('No se encontró el nodo tfd:TimbreFiscalDigital en el XML.').removeClass('alert-success').addClass('alert-danger').show();
+                    }
+                } catch (error) {
+                    resultMessage.text('Error al parsear el XML: ' + error.message).removeClass('alert-success').addClass('alert-danger').show();
+                    console.error('Error parsing XML:', error);
+                }
+            }
+
+            $('#obtenerPdfForm').on('submit', function(e) {
+                e.preventDefault(); 
+
+                const usuario = $('#usuario').val();
+                const password = $('#password').val();
+                const uuid = uuidInput.val();
+
+                if (!usuario || !password || !uuid) {
+                    resultMessage.text('Por favor, complete todos los campos (Usuario, Contraseña, UUID).').removeClass('alert-success').addClass('alert-danger').show();
+                    return;
+                }
+
+                resultMessage.text('Obteniendo PDF...').removeClass('alert-success alert-danger').addClass('alert-info').show();
+                resultContainer.show();
+                pdfViewer.empty(); 
+
+                callWebServiceObtenerPDF(usuario, password, uuid);
+            });
+            async function callWebServiceObtenerPDF(usuario, password, uuid) {
+                const serviceUrl = 'https://timbrador.cepdi.mx:8443/WSDemo/WS?WSDL'; 
+
+                const soapRequest = `
+                    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://ws.wsdlsat.cl">
+                        <soapenv:Header/>
+                        <soapenv:Body>
+                            <web:ObtenerPDF>
+                                <Usuario>${usuario}</Usuario>
+                                <Password>${password}</Password>
+                                <uuid>${uuid}</uuid>
+                            </web:ObtenerPDF>
+                        </soapenv:Body>
+                    </soapenv:Envelope>
+                `;
+
+                $.ajax({
+                    url: serviceUrl,
+                    type: 'POST',
+                    dataType: 'xml',
+                    contentType: 'text/xml; charset=utf-8',
+                    headers: {
+                        'SOAPAction': '"#POST"'
+                    },
+                    data: soapRequest,
+                    success: function(response) {
+                        const exitosoNode = $(response).find('Exitoso').text();
+                        const pdfNode = $(response).find('PDF').text();
+                        const mensajeErrorNode = $(response).find('MensajeError').text();
+
+                        const exitoso = exitosoNode === 'true';
+                        const pdfBase64 = pdfNode;
+                        const mensajeError = mensajeErrorNode ? mensajeErrorNode : 'Error desconocido.';
+
+                        if (exitoso && pdfBase64) {
+                            if (typeof resultMessage !== 'undefined' && resultMessage instanceof jQuery) {
+                                resultMessage.text('PDF obtenido exitosamente.').removeClass('alert-danger alert-info').addClass('alert-success');
+                            }
+                            if (typeof displayPdf !== 'undefined' && typeof pdfBase64 === 'string') {
+                                displayPdf(pdfBase64);
+                            }
+                        } else {
+                            if (typeof resultMessage !== 'undefined' && resultMessage instanceof jQuery) {
+                                resultMessage.text('Error al obtener el PDF: ' + mensajeError).removeClass('alert-success alert-info').addClass('alert-danger');
+                            }
+                            if (typeof pdfViewer !== 'undefined' && pdfViewer instanceof jQuery) {
+                                pdfViewer.empty(); 
+                            }
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        if (typeof resultMessage !== 'undefined' && resultMessage instanceof jQuery) {
+                            resultMessage.text('Error en la comunicación con el Web Service: ' + (errorThrown || textStatus)).removeClass('alert-success').addClass('alert-danger');
+                        }
+                        console.error('Error fetching PDF (jQuery AJAX):', textStatus, errorThrown);
+                        console.error('jqXHR ResponseText:', jqXHR.responseText);
+                        if (typeof pdfViewer !== 'undefined' && pdfViewer instanceof jQuery) {
+                            pdfViewer.empty();
+                        }
+                    }
+                });
+            }
+
+            function displayPdf(base64) {
+                const byteCharacters = atob(base64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(blob);
+
+                pdfViewer.html(`<iframe src="${blobUrl}" width="100%" height="100%" frameborder="0"></iframe>`);
+            }
+        });
+    </script>
+}
