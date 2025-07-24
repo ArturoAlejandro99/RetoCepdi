@@ -168,20 +168,18 @@
 
             showMessage('Obteniendo PDF...', 'info');
 
-            // Aquí se llama a la función con $.ajax
             callBackendObtenerPDF(uuid);
         });
         var apiBaseUrl = "@Model.ApiBaseUrl";
 
-        // --- Función para llamar al Backend (AHORA CON $.AJAX) ---
         function callBackendObtenerPDF(uuid) { 
             const backendApiUrl =  apiBaseUrl + `/api/Facturas/obtenerpdf/${uuid}`; 
 
             $.ajax({
                 url: backendApiUrl,
-                type: 'POST', // O 'GET' si cambiaste tu backend a GET para este endpoint
-                dataType: 'json', // Esperamos una respuesta JSON de tu backend
-                contentType: 'application/json', // Opcional si no envías cuerpo, pero buena práctica
+                type: 'POST', 
+                dataType: 'json', 
+                contentType: 'application/json', 
                 success: function(responseData) {
                     if (responseData.exitoso) {
                         showMessage('PDF obtenido exitosamente.', 'success');
@@ -213,11 +211,9 @@
         function displayPdf(base64Pdf) {
             const pdfData = `data:application/pdf;base64,${base64Pdf}`;
             
-            // Abre una nueva ventana/pestaña
+            
             const newWindow = window.open();
             if (newWindow) {
-                // Escribe el contenido del PDF Base64 directamente en la nueva ventana
-                // Esto crea un documento HTML con un iframe que carga el PDF
                 newWindow.document.write(`
                     <!DOCTYPE html>
                     <html>
@@ -233,7 +229,7 @@
                     </body>
                     </html>
                 `);
-                newWindow.document.close(); // Cierra el documento para asegurar que todo el contenido se ha escrito
+                newWindow.document.close(); 
                 
             } else {
                 showMessage('El navegador bloqueó la apertura de la nueva ventana para el PDF. Por favor, permite pop-ups para este sitio.', 'error');
