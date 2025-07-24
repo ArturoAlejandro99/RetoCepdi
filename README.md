@@ -114,6 +114,8 @@ Este proyecto está desarrollado con **.NET 9** y ofrece una solución práctica
 
 - Documentar la API con OpenAPI/Swagger: Para ofrecer una interfaz interactiva de prueba y documentación técnica estandarizada.
 
+- Implementar cache para información que es consumida regularmente. Para mejora del performance se podría realizar la implementación de cache para endpoints que sean altamente consumidos con los mismos parametros. La implementación podría realizarse con Redis en caso de que el despliegue fuera de multiples instancias o de lo contrario en memoria.
+
 ## 💻 Frontend (RetoTecnico.Web)
 
 - Migrar llamadas jQuery a Fetch API: jQuery está deprecado en muchos entornos modernos; usar Fetch mejora compatibilidad y control.
