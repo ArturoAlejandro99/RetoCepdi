@@ -10,6 +10,7 @@ using RetoTecnico.API.Services.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -46,6 +47,7 @@ builder.Services.AddDbContext<CepdiPruebaContext>(options =>
 
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>(); 
+builder.Services.AddScoped<IObtenerPdfService, ObtenerPdfService>(); 
 
 builder.Services.AddCors(options =>
 {
