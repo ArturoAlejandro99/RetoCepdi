@@ -24,15 +24,16 @@ namespace RetoTecnico.API.Controllers
         [Authorize]
         public async Task<ActionResult<IEnumerable<UsuarioResponseDto>>> GetUsuarios([FromQuery] UsuarioQueryParamsDTO queryParams)
         {
-            var usuariosDto = await _usuarioService.GetAllUsuariosAsync(queryParams);
-            if (!usuariosDto.Any())
+            var (usuariosData, totalRecords) = await _usuarioService.GetAllUsuariosAsync(queryParams);
+            if (!usuariosData.Any())
             {
-                return NotFound("No se encontraron usuarios.");
+                return Ok(new { Data = new List<UsuarioResponseDto>(), TotalRecords = 0 });
             }
-            return Ok(usuariosDto);
+            return Ok(new { Data = usuariosData, TotalRecords = totalRecords });
         }
 
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<UsuarioResponseDto>> GetUsuario(int id)
         {
             var usuarioDto = await _usuarioService.GetUsuarioByIdAsync(id);
@@ -63,6 +64,7 @@ namespace RetoTecnico.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> PutUsuario(int id, UsuarioCreateDto usuarioDto)
         {
             if (!ModelState.IsValid)
@@ -87,6 +89,7 @@ namespace RetoTecnico.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteUsuario(int id)
         {
             var isDeleted = await _usuarioService.DeleteUsuarioAsync(id);

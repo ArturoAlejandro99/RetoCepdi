@@ -8,6 +8,22 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/RetoTecnico.Web.styles.css" asp-append-version="true" />
+    <script type="text/javascript">
+        var publicRoutes = ['/Login', '/Privacy', '/Error'];
+
+        var currentPath = window.location.pathname;
+        var isPublicRoute = publicRoutes.some(function(route) {
+            return currentPath === route || (route !== '/' && currentPath.startsWith(route + '/'));
+        });
+
+        if (!isPublicRoute) {
+            var jwtToken = localStorage.getItem('jwtToken');
+            if (!jwtToken) {
+                console.warn("No JWT token found for protected route. Redirecting to login page.");
+                window.location.href = '/Login';
+            }
+        }
+    </script>
 </head>
 <body>
     <header>
@@ -23,8 +39,8 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
+                        <li class="nav-item"></li>
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Usuarios/Index">Usuarios</a>
                         </li>
                     </ul>
                 </div>
@@ -46,7 +62,6 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

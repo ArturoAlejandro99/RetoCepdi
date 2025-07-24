@@ -19,7 +19,7 @@ public class UsuarioService : IUsuarioService
         _context = context;
     }
 
-    public async Task<IEnumerable<UsuarioResponseDto>> GetAllUsuariosAsync(UsuarioQueryParamsDTO queryParams)
+    public async Task<(IEnumerable<UsuarioResponseDto> Data, int TotalRecords)> GetAllUsuariosAsync(UsuarioQueryParamsDTO queryParams)
     {
         var query = _context.Usuarios.AsQueryable();
 
@@ -30,6 +30,8 @@ public class UsuarioService : IUsuarioService
                 u.NombreUsuario != null && u.NombreUsuario.Contains(queryParams.SearchTerm)
             );
         }
+
+        var totalRecords = await query.CountAsync();
 
         if (!string.IsNullOrEmpty(queryParams.SortBy))
         {
@@ -63,15 +65,17 @@ public class UsuarioService : IUsuarioService
             .Take(queryParams.PageSize)
             .ToListAsync();
 
-        return usuarios.Select(u => new UsuarioResponseDto
-        {
-            Idusuario = u.Idusuario,
-            Nombre = u.Nombre,
-            Fechacreacion = u.Fechacreacion,
-            NombreUsuario = u.NombreUsuario,
-            Idperfil = u.Idperfil,
-            Estatus = u.Estatus
-        }).ToList();
+        var usuarioDtos = usuarios.Select(u => new UsuarioResponseDto
+            {
+                Idusuario = u.Idusuario,
+                Nombre = u.Nombre,
+                Fechacreacion = u.Fechacreacion,
+                NombreUsuario = u.NombreUsuario,
+                Idperfil = u.Idperfil,
+                Estatus = u.Estatus
+            }).ToList();
+
+            return (usuarioDtos, totalRecords);
     }
 
     public async Task<UsuarioResponseDto?> GetUsuarioByIdAsync(int id)
@@ -107,7 +111,7 @@ public class UsuarioService : IUsuarioService
             NombreUsuario = usuarioDto.NombreUsuario,
             Password = BCrypt.Net.BCrypt.HashPassword(usuarioDto.Password),
             Idperfil = usuarioDto.Idperfil,
-            Estatus = usuarioDto.Estatus,
+            Estatus = 1,
             Fechacreacion = DateTime.Now
         };
 
